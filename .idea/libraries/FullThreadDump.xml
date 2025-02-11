@@ -1,0 +1,10 @@
+<component name="libraryTable">
+  <library name="FullThreadDump">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/jdk-8/demo/management/FullThreadDump/src.zip!/" />
+      <root url="jar://$PROJECT_DIR$/jdk-8/demo/management/FullThreadDump/FullThreadDump.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>
