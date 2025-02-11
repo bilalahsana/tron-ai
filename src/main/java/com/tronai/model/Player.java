@@ -43,6 +43,10 @@ public class Player {
         return isAlive;
     }
 
+    public void setIsAlive(boolean isAlive) {
+        this.isAlive = isAlive;
+    }
+
     public void die() {
         this.isAlive = false;
     }

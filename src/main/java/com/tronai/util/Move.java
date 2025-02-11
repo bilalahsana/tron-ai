@@ -9,7 +9,12 @@ public class Move {
         this.dy = dir.dy;
     }
 
-    public Move getDirection() {
-        return this;
+    public Direction getDirection() {
+        for (Direction direction : Direction.values()) {
+            if (direction.dx == this.dx && direction.dy == this.dy) {
+                return direction;
+            }
+        }
+        throw new IllegalArgumentException("Invalid move direction: (" + dx + ", " + dy + ")");
     }
 }

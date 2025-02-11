@@ -9,7 +9,6 @@ import com.tronai.util.Position;
 import java.util.ArrayList;
 import java.util.List;
 
-import static com.tronai.view.ViewApplication.config;
 
 public class Game {
     private final int width;
@@ -41,7 +40,7 @@ public class Game {
     public void addPlayer(Player player) {
         players.add(player);
         Position pos = player.getPosition();
-        grid[pos.getY()][pos.getX()] = new Cell(player);
+        grid[pos.getY()][pos.getX()] = new Cell(player,true);
     }
 
     public void addTeam(Team team) {
@@ -49,13 +48,19 @@ public class Game {
     }
 
     private void updateGrid(Player player, Position pos) {
-        grid[pos.getY()][pos.getX()] = new Cell(player);
+        grid[player.getPosition().getY()][player.getPosition().getX()].setIsPlayer(false);
+        grid[pos.getY()][pos.getX()] = new Cell(player,true);
+        player.setPosition(pos);
     }
 
 
     public boolean makeMove(Move move) {
         Player currentPlayer = getCurrentPlayer();
-        if (!currentPlayer.isAlive() || !isValidMove(move)) {
+        if (currentPlayer.isAlive() && !isValidMove(move)) {
+            currentPlayer.die();
+            return false;
+        }else if(!currentPlayer.isAlive()){
+            nextTurn();
             return false;
         }
 
@@ -106,6 +111,27 @@ public class Game {
         do {
             currentPlayerIndex = (currentPlayerIndex + 1) % players.size();
         } while (!getCurrentPlayer().isAlive() && !isGameOver());
+    }
+
+    public Player getNextPlayer(){
+        return players.get((currentPlayerIndex + 1) % players.size());
+    }
+
+    public List<Move> getPossibleMoves(Player player) {
+        List<Move> possibleMoves = new ArrayList<>();
+        Position currentPlayerPosition = player.getPosition();
+
+        // Iterate through all possible directions
+        for (Direction direction : Direction.values()) {
+            Position newPosition = calculateNewPosition(currentPlayerPosition, new Move(direction));
+
+            // Check if the move is valid
+            if (isWithinBounds(newPosition) && grid[newPosition.getY()][newPosition.getX()].isEmpty()) {
+                possibleMoves.add(new Move(direction));
+            }
+        }
+
+        return possibleMoves;
     }
 
     public boolean isGameOver() {
@@ -196,6 +222,133 @@ public class Game {
         return new Position(x, y);
     }
 
+    public int getControlledAreaBy(Player player) {
+        int controlledArea = 0;
+
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                Cell cell = grid[y][x];
+                if (cell.getOwner() != null && cell.getOwner().getId() == player.getId()) {
+                    controlledArea++;
+                }
+            }
+        }
+
+        return controlledArea;
+    }
+
+    public Game copy() {
+        // Create a new Game instance with the same dimensions
+        Game copiedGame = new Game(this.width, this.height);
+
+        // Copy players
+        for (Player player : this.players) {
+            Player copiedPlayer = new Player(player.getId(), player.getPosition(), player.getName(), player.getTeam());
+            if(!player.isAlive())copiedPlayer.die();
+            copiedGame.addPlayer(copiedPlayer);
+        }
+
+        // Copy teams
+        for (Team team : this.teams) {
+            Team copiedTeam = new Team(team.getId(), team.getName());
+            copiedGame.addTeam(copiedTeam);
+
+            // Add copied players to their respective teams
+            for (Player player : team.getPlayers()) {
+                Player copiedPlayer = copiedGame.getPlayers().stream()
+                        .filter(p -> p.getId() == player.getId())
+                        .findFirst()
+                        .orElse(null);
+                if (copiedPlayer != null) {
+                    copiedTeam.addPlayer(copiedPlayer);
+                }
+            }
+        }
+
+        // Copy grid
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                Cell originalCell = this.grid[y][x];
+                Player cellOwner = originalCell.getOwner();
+                Player copiedOwner = null;
+
+                // Find the corresponding copied player as the owner
+                if (cellOwner != null) {
+                    copiedOwner = copiedGame.getPlayers().stream()
+                            .filter(p -> p.getId() == cellOwner.getId())
+                            .findFirst()
+                            .orElse(null);
+                    copiedGame.grid[y][x] = new Cell(copiedOwner, originalCell.isPlayer());
+                }else{
+                    copiedGame.grid[y][x] = new Cell();
+                }
+
+                // Create a new Cell with the copied owner and isPlayer flag
+            }
+        }
+
+        // Copy move history
+        for (Move move : this.moveHistory) {
+            copiedGame.moveHistory.add(move);
+        }
+
+        // Copy current player index
+        copiedGame.currentPlayerIndex = this.currentPlayerIndex;
+
+        return copiedGame;
+    }
+
+    public boolean undoMove() {
+        // Check if there are any moves to undo
+        if (moveHistory.isEmpty()) {
+            return false; // No moves to undo
+        }
+
+        // Retrieve the last move from the history
+        Move lastMove = moveHistory.remove(moveHistory.size() - 1);
+
+        // Get the current player
+        Player currentPlayer = getCurrentPlayer();
+
+        // Calculate the previous position before the last move
+        Position currentPosition = currentPlayer.getPosition();
+        Position previousPosition = new Position(
+                currentPosition.getX() - lastMove.dx,
+                currentPosition.getY() - lastMove.dy
+        );
+
+        // Ensure the previous position is valid
+        if (!isWithinBounds(previousPosition)) {
+            return false; // Invalid undo operation
+        }
+
+        // Update the grid to remove the trail left by the player
+        Cell currentCell = grid[currentPosition.getY()][currentPosition.getX()];
+        currentCell.setIsPlayer(false); // Remove the player from the current cell
+        currentCell.setOwner(null);     // Clear ownership of the cell
+
+        // Restore the previous cell as the player's position
+        Cell previousCell = grid[previousPosition.getY()][previousPosition.getX()];
+        previousCell.setIsPlayer(true); // Mark the previous cell as the player's position
+        previousCell.setOwner(currentPlayer); // Set the player as the owner of the previous cell
+
+        // Update the player's position
+        currentPlayer.setPosition(previousPosition);
+
+        // If the player died during the last move, restore their alive status
+        if (!currentPlayer.isAlive()) {
+            currentPlayer.setIsAlive(true);
+        }
+
+        // Adjust the current player index if necessary
+        if (currentPlayerIndex > 0) {
+            currentPlayerIndex--; // Go back to the previous player
+        } else {
+            currentPlayerIndex = players.size() - 1; // Wrap around to the last player
+        }
+
+        return true; // Undo successful
+    }
     public int getHeight() {
         return height;
     }

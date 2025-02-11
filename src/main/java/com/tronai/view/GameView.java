@@ -1,10 +1,15 @@
 package com.tronai.view;
 
-import com.tronai.config.GameConfig;
+import com.tronai.config.ConfigLoader;
 import com.tronai.model.Game;
+import com.tronai.model.Player;
+import com.tronai.model.Team;
 import com.tronai.util.Cell;
+import javafx.scene.control.Label;
+import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Text;
@@ -13,7 +18,8 @@ import javafx.scene.text.Font;
 public class GameView {
 
     private final GridPane gridPane;
-    private final Color[] teamColors; // Array to store colors for each team
+    private final VBox stateSection;
+    private final Color[][] teamColors; // Array to store colors for each team
     private final Game game;
     private final int CELL_SIZE;
 
@@ -21,40 +27,59 @@ public class GameView {
         this.game = game;
         this.gridPane = new GridPane();
         this.gridPane.setMaxSize(game.getWidth(),game.getHeight());
-        this.CELL_SIZE = 50;
-        this.teamColors = new Color[]{Color.RED, Color.BLUE, Color.GREEN, Color.YELLOW}; // Example colors for teams
-        initializeGrid();
+        this.CELL_SIZE = ConfigLoader.getIntProperty("cell.size");
+        this.teamColors = new Color[][] {
+                // Row for Team 1: first is team color, then player colors
+                {Color.RED, Color.PINK, Color.DARKRED},
+                // Row for Team 2: first is team color, then player colors
+                {Color.BLUE, Color.LIGHTBLUE, Color.DARKBLUE},
+                // Row for Team 3: first is team color, then player colors
+                {Color.GREEN, Color.LIGHTGREEN, Color.DARKGREEN},
+                // Row for Team 4: first is team color, then player colors
+                {Color.YELLOW, Color.LIGHTYELLOW, Color.GOLD}
+        };
+        this.stateSection = new VBox();
+        this.stateSection.setSpacing(10); // Add spacing between elements
+        this.stateSection.setStyle("-fx-padding: 10; -fx-background-color: #000;");
+
+        update(game);
+
     }
 
-    public GameView(Game game, GameConfig config) {
-        this.game = game;
-        this.gridPane = new GridPane();
-        this.CELL_SIZE = config.getCellSize();
-        this.teamColors = new Color[]{Color.RED, Color.BLUE, Color.GREEN, Color.YELLOW}; // Example colors for teams
-        initializeGrid();
+
+    public void update(Game model){
+        updateGrid(model);
+        // Update the state section
+        updateStateSection(model);
     }
 
-    private void initializeGrid() {
-        int width = game.getWidth();
-        int height = game.getHeight();
-        Cell[][] grid = game.getGrid();
+    private void updateGrid(Game model) {
+        int width = model.getWidth();
+        int height = model.getHeight();
+        Cell[][] grid = model.getGrid();
 
         for (int y = 0; y < height; y++) {
             for (int x = 0; x < width; x++) {
-                Rectangle cell = new Rectangle(this.CELL_SIZE, this.CELL_SIZE); // Cell size
+                Rectangle cell = new Rectangle(this.CELL_SIZE, this.CELL_SIZE);
+//                cell.setStrokeWidth(1);// Cell size
                 Text text = new Text();
                 text.setFont(Font.font(10)); // Set font size for the player ID
 
-                if (grid[x][y].isEmpty()) {
+                if (grid[y][x].isEmpty()) {
                     cell.setFill(Color.BLACK); // Empty cell
-                    text.setText(""); // No text for empty cells
+                    text.setText("");
+                    cell.setStroke(Color.GRAY); // No text for empty cells
                 } else {
-                    int teamId = grid[x][y].getOwner().getTeam().getId();
-                    cell.setFill(getTeamColor(teamId)); // Color based on team ID
-                    text.setText(String.format("T%dP%d",grid[x][y].getOwner().getTeam().getId(),grid[x][y].getOwner().getId())); // Set player ID as text
+                    int teamId = grid[y][x].getOwner().getTeam().getId();
+                    cell.setStroke(getTeamColor(teamId));
+                    cell.setFill(getPlayerColor(teamId, grid[y][x].getOwner().getId())); // Color based on team ID
+                    if(grid[y][x].isPlayer()) {
+                        cell.setFill(getPlayerColor(teamId, grid[y][x].getOwner().getId()));
+                        text.setText("x"); // Set player ID as text
+                    }else{
+//                        text.setText(String.format("T%dP%dW",grid[y][x].getOwner().getTeam().getId(),grid[y][x].getOwner().getId())); // Set player ID as text
+                    }
                 }
-
-                cell.setStroke(Color.BLACK); // Border color
 
                 // Use a StackPane to overlay the text on top of the rectangle
                 StackPane stackPane = new StackPane();
@@ -65,33 +90,36 @@ public class GameView {
         }
     }
 
-    public void update(Game model){
-        int width = model.getWidth();
-        int height = model.getHeight();
-        Cell[][] grid = model.getGrid();
+    private void updateStateSection(Game model) {
+        stateSection.getChildren().clear(); // Clear the state section before updating
 
-        for (int y = 0; y < height; y++) {
-            for (int x = 0; x < width; x++) {
-                Rectangle cell = new Rectangle(this.CELL_SIZE, this.CELL_SIZE); // Cell size
-                Text text = new Text();
-                text.setFont(Font.font(10)); // Set font size for the player ID
+        // Add a title for the state section
+        Label title = new Label("Game State");
+        title.setStyle("-fx-font-size: 16; -fx-font-weight: bold; -fx-text-fill: white");
+        stateSection.getChildren().add(title);
+        if(model.getPlayers().size() == 0) return;
+        // Display current player info
+        Player currentPlayer = model.getCurrentPlayer();
+        if (currentPlayer != null) {
+            Label currentPlayerLabel = new Label("Current Player: Player " + currentPlayer.getId() +
+                    " (Team " + currentPlayer.getTeam().getId() + ")");
+            String currentPlayerColorHex = "#" + getPlayerColor(currentPlayer.getTeam().getId(), currentPlayer.getId()).toString().substring(2, 8);
+            currentPlayerLabel.setStyle("-fx-text-fill: "+currentPlayerColorHex+";");
+            stateSection.getChildren().add(currentPlayerLabel);
+        }
 
-                if (grid[x][y].isEmpty()) {
-                    cell.setFill(Color.WHITE); // Empty cell
-                    text.setText(""); // No text for empty cells
-                } else {
-                    int teamId = grid[x][y].getOwner().getTeam().getId();
-                    cell.setFill(getTeamColor(teamId)); // Color based on team ID
-                    text.setText(String.format("T%dP%d",grid[x][y].getOwner().getTeam().getId(),grid[x][y].getOwner().getId())); // Set player ID as text
-                }
+        // Display team and player status
+        for (Team team : model.getTeams()) {
+            Label teamLabel = new Label("Team " + team.getId() + ": ");
+            String teamColorHex = "#" + getTeamColor(team.getId()).toString().substring(2, 8);
+            teamLabel.setStyle("-fx-text-fill: "+teamColorHex+";");
+            stateSection.getChildren().add(teamLabel);
 
-                cell.setStroke(Color.BLACK); // Border color
-
-                // Use a StackPane to overlay the text on top of the rectangle
-                StackPane stackPane = new StackPane();
-                stackPane.getChildren().addAll(cell, text);
-
-                gridPane.add(stackPane, x, y);
+            for (Player player : team.getPlayers()) {
+                Label playerLabel = new Label("  Player " + player.getId() + ": " + (player.isAlive()?"Alive":"Dead"));
+                String playerColorHex = "#" + getPlayerColor(team.getId(), player.getId()).toString().substring(2, 8);
+                playerLabel.setStyle("-fx-text-fill: "+playerColorHex+";");
+                stateSection.getChildren().add(playerLabel);
             }
         }
     }
@@ -99,27 +127,32 @@ public class GameView {
     private Color getTeamColor(int teamId) {
         // Ensure the teamId is within the bounds of the teamColors array
         if (teamId >= 0 && teamId < teamColors.length) {
-            return teamColors[teamId];
+            return teamColors[teamId][0];
         } else {
             return Color.GRAY; // Default color for unknown teams
         }
+    }
+
+    private Color getPlayerColor(int teamId, int playerId) {
+        // Ensure the teamId is within the bounds of the teamColors array
+        if (teamId >= 0 && teamId < teamColors.length) {
+            return teamColors[teamId][playerId];
+        } else {
+            return Color.GRAY; // Default color for unknown teams
+        }
+    }
+
+    public BorderPane getView() {
+        // Combine the grid and state section into a BorderPane
+        BorderPane root = new BorderPane();
+        root.setCenter(gridPane); // Game grid in the center
+        root.setRight(stateSection); // State section on the right
+        return root;
     }
 
     public GridPane getGridPane() {
         return gridPane;
     }
 
-    public static void displayGrid(Cell[][] grid) {
-        for (int x = 0; x < grid.length; x++) {
-            for (int y = 0; y < grid[0].length; y++) {
-                String data = grid[x][y].isEmpty() ? "    " : String.format("T%dP%d", grid[x][y].getOwner().getTeam().getId(), grid[x][y].getOwner().getId());
-                System.out.print("[" + data + "]");
-            }
-            System.out.println();
-        }
-    }
 
-    public void displayMessage(String message) {
-        System.out.println(message);
-    }
 }

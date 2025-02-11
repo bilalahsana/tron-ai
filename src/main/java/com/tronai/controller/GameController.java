@@ -1,33 +1,24 @@
 package com.tronai.controller;
 
-import com.tronai.config.GameConfig;
+import com.tronai.algo.MaxN;
 import com.tronai.model.Game;
 import com.tronai.model.Player;
-import com.tronai.model.Team;
-import com.tronai.util.Cell;
 import com.tronai.util.Direction;
 import com.tronai.util.Move;
 import com.tronai.util.Position;
 import com.tronai.view.GameView;
 import javafx.scene.layout.GridPane;
 
+import java.util.Timer;
+
 public class GameController {
     private final Game game;
     private final GameView gameView;
-    private final GameConfig config;
 
-    public GameController(Game game, GameView gameView,GameConfig config) {
-        this.game = game;
-        this.gameView = gameView;
-        this.config = config;
-//        setupEventHandlers();
-    }
     public GameController(Game game, GameView gameView) {
         this.game = game;
         this.gameView = gameView;
-        this.config = new GameConfig(8,8,2,1);
-//        setupEventHandlers();
-//        initializeTeamsAndPlayers();
+        setupEventHandlers();
         this.updateView();
     }
 
@@ -45,6 +36,7 @@ public class GameController {
     }
 
     private void handleCellClick(int x, int y) {
+        System.out.println("dsgsdfgdfgdsfgsdf");
         Player currentPlayer = game.getCurrentPlayer();
         Move move = new Move(Direction.RIGHT); // Example: Always move right
         if (game.makeMove(move)) {
@@ -59,10 +51,21 @@ public class GameController {
     }
 
     public void startGame() {
+        Timer timer = new Timer();
         this.game.initializeTeamsAndPlayers(2, 1);
-                game.makeMove(new Move(Direction.UP));
-                game.makeMove(new Move(Direction.RIGHT));
                 this.updateView();
+    }
+
+    public void move(Direction direction) {
+        game.makeMove(new Move(direction));
+        updateView();
+    }
+
+    public void AutoMove() {
+        MaxN algo =  new MaxN();
+        Move bestMove = algo.findBestMove(game.copy(),game.copy().getCurrentPlayer());
+        game.makeMove(bestMove);
+        updateView();
     }
 
     public void initializeTeamsAndPlayers() {

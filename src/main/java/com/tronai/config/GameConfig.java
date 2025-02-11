@@ -25,11 +25,11 @@ public class GameConfig {
 
     public static GameConfig fromArgs(String[] args) {
         // Par défaut
-        int width = 10;
-        int height = 10;
+        int width = 50;
+        int height = 50;
         int numTeams = 2;
         int playersPerTeam = 1;
-        int cellSize = 50;
+        int cellSize = 10;
 
         // Parser les arguments
         for (int i = 0; i < args.length; i += 2) {
