@@ -1,6 +1,11 @@
 package com.tronai.algo;
 
-public class SOSAlgorithm {
+import com.tronai.model.Game;
+import com.tronai.model.Player;
+import com.tronai.util.Move;
+import java.util.List;
+
+public class SOS implements IAI {
 
     private static final int MAX_DEPTH = 5;
 

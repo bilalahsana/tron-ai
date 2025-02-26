@@ -1,6 +1,5 @@
 package com.tronai.config;
-import java.io.FileInputStream; // Import for FileInputStream
-import java.io.IOException;
+
 import java.io.InputStream;
 import java.util.Properties;
 
@@ -9,7 +8,7 @@ public class ConfigLoader {
 
     static {
         try {
-            InputStream inputStream = new FileInputStream("src/main/resources/config.properties");
+            InputStream inputStream = ConfigLoader.class.getClassLoader().getResourceAsStream("config.properties");
             if (inputStream != null) {
                 config.load(inputStream);
             } else {

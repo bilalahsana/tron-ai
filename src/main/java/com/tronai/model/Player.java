@@ -51,4 +51,7 @@ public class Player {
         this.isAlive = false;
     }
 
+    public boolean equals(Player obj) {
+        return this.team.getId()==obj.team.getId() && this.id == obj.id && this.name == obj.name && this.position.equals(obj.position);
+    }
 }

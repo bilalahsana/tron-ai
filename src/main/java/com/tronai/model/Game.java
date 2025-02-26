@@ -8,6 +8,7 @@ import com.tronai.util.Position;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 
 public class Game {
@@ -107,7 +108,7 @@ public class Game {
         return false;
     }
 
-    private void nextTurn() {
+    public void nextTurn() {
         do {
             currentPlayerIndex = (currentPlayerIndex + 1) % players.size();
         } while (!getCurrentPlayer().isAlive() && !isGameOver());
@@ -135,6 +136,13 @@ public class Game {
     }
 
     public boolean isGameOver() {
+        for (Player player : getPlayers()) {
+            for(Team team: getTeams()){
+                if(player.getTeam().getId() == team.getId()){
+                    team.addPlayer(player);
+                }
+            }
+        }
         // Le jeu est terminé si une seule équipe a des joueurs en vie
         long teamsAlive = teams.stream().filter(Team::hasAlivePlayers).count();
         return teamsAlive <= 1;
@@ -234,7 +242,7 @@ public class Game {
             }
         }
 
-        return controlledArea;
+        return --controlledArea;
     }
 
     public Game copy() {
@@ -351,5 +359,29 @@ public class Game {
     }
     public int getHeight() {
         return height;
+    }
+
+
+    public List<Player> getTeammates(Player currentPlayer) {
+        if (currentPlayer == null || currentPlayer.getTeam() == null) {
+            return new ArrayList<>();
+        }
+
+        Team currentTeam = currentPlayer.getTeam();
+        return this.getPlayers().stream()
+                .filter(player ->player.getTeam().equals(currentPlayer.getTeam()) && !player.equals(currentPlayer)) // Exclude the current player
+                .toList();
+    }
+
+    public List<Player> getOpponents() {
+        Player currentPlayer = getCurrentPlayer();
+        if (currentPlayer == null || currentPlayer.getTeam() == null) {
+            return new ArrayList<>();
+        }
+
+        Team currentTeam = currentPlayer.getTeam();
+        return players.stream()
+                .filter(player -> player.getTeam() != null && !player.getTeam().equals(currentTeam))
+                .collect(Collectors.toList());
     }
 }

@@ -1,22 +1,14 @@
 package com.tronai.view;
 
 import com.tronai.config.ConfigLoader;
-import com.tronai.config.GameConfig;
 import com.tronai.controller.GameController;
 import com.tronai.model.Game;
-import com.tronai.model.Player;
-import com.tronai.model.Team;
 import com.tronai.util.AlgorithmType;
-import com.tronai.util.Direction;
-import com.tronai.util.Position;
 import javafx.application.Application;
-import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
 import javafx.scene.control.ChoiceDialog;
-import javafx.scene.control.Label;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
-import javafx.scene.layout.GridPane;
 import javafx.stage.Stage;
 
 import java.io.IOException;
@@ -28,6 +20,8 @@ public class ViewApplication extends Application {
 //    public static GameConfig config;
     @Override
     public void start(Stage stage) throws IOException {
+//        int numTeams = selectNumberOfTeams();
+//        int playersPerTeam = selectPlayersPerTeam();
         // Initialize Model (Game)
         Game game = new Game(ConfigLoader.getIntProperty("grid.width"), ConfigLoader.getIntProperty("grid.height")); // Example: 10x10 grid with 2 players
         GameView gameView = new GameView(game);
@@ -51,25 +45,51 @@ public class ViewApplication extends Application {
 
                 gameController.AutoMove(); // Move up
                 break;
-            case UP:
-                gameController.move(Direction.UP); // Move up
-                break;
-            case DOWN:
-                gameController.move(Direction.DOWN); // Move down
-                break;
-            case LEFT:
-                gameController.move(Direction.LEFT); // Move left
-                break;
-            case RIGHT:
-                gameController.move(Direction.RIGHT); // Move right
-                break;
             default:
-                // Handle other key presses if needed
                 break;
         }
     }
 
+    private void selectTeamsAlgorithm(Game game) {
+        List<AlgorithmType> teamAlgorithms = new ArrayList<>();
+        for (int i = 0; i < game.getTeams().size(); i++) {
+            AlgorithmType selectedAlgorithm = showAlgorithmDialog("Team " + (i + 1));
+            teamAlgorithms.add(selectedAlgorithm);
+        }
+    }
 
+    private AlgorithmType showAlgorithmDialog(String teamName) {
+        List<AlgorithmType> choices = List.of(AlgorithmType.values());
+        ChoiceDialog<AlgorithmType> dialog = new ChoiceDialog<>(choices.get(0), choices);
+        dialog.setTitle("Algorithm Selection");
+        dialog.setHeaderText("Choose an algorithm for " + teamName);
+        dialog.setContentText("Algorithm:");
+
+        Optional<AlgorithmType> result = dialog.showAndWait();
+        return result.orElse(AlgorithmType.RANDOM); // Default to RANDOM if no selection is made
+    }
+
+    private int selectNumberOfTeams() {
+        List<Integer> choices = List.of(1, 2, 3, 4); // Example: Allow 1-4 teams
+        ChoiceDialog<Integer> dialog = new ChoiceDialog<>(choices.get(0), choices);
+        dialog.setTitle("Team Configuration");
+        dialog.setHeaderText("Select the number of teams");
+        dialog.setContentText("Teams:");
+
+        Optional<Integer> result = dialog.showAndWait();
+        return result.orElse(1); // Default to 1 team
+    }
+
+    private int selectPlayersPerTeam() {
+        List<Integer> choices = List.of(1, 2, 3, 4, 5); // Example: 1-5 players per team
+        ChoiceDialog<Integer> dialog = new ChoiceDialog<>(choices.get(0), choices);
+        dialog.setTitle("Players Configuration");
+        dialog.setHeaderText("Select the number of players ");
+        dialog.setContentText("Players per team:");
+
+        Optional<Integer> result = dialog.showAndWait();
+        return result.orElse(1); // Default to 1 player per team
+    }
 
 
 }
